@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 def add_module(self, module):
-    self.add_module(str(len(self) + 1), module)
+    self.add_module(str(len(self._modules) + 1), module)
 
 torch.nn.Module.add = add_module
 

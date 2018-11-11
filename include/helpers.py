@@ -10,10 +10,6 @@ import numpy as np
 
 from torch.autograd import Variable
 
-
-
-
-
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
