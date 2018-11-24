@@ -37,6 +37,7 @@ def fit(net,
         reg_noise_decayevery = 100000,
         mask_var = None,
         apply_f = None,
+        loss_func = torch.nn.MSELoss(),
         decaylr = False,
         net_input = None,
         net_input_gen = "random",
@@ -46,26 +47,44 @@ def fit(net,
     if net_input is not None:
         print("input provided")
     else:
-        # feed uniform noise into the network 
+        # Calculate size of network input
         totalupsample = 2**len(num_channels)
         width = int(img_clean_var.data.shape[2]/totalupsample)
         height = int(img_clean_var.data.shape[3]/totalupsample)
-        shape = [1,num_channels[0], width, height]
-        print("shape: ", shape)
+        shape = [1, num_channels[0], width, height]
+        print("network input shape: ", shape)
+
+        # Feed uniform noise into the network 
         net_input = Variable(torch.zeros(shape))
         net_input.data.uniform_()
         net_input.data *= 1./10
-
+        
     net_input_saved = net_input.data.clone()
     noise = net_input.data.clone()
-    p = [x for x in net.parameters() ]
+        
+    if net_input_gen == "downsample":
+        # Add the downsampled image to the noise
+        down = np_to_pil(var_to_np(img_noisy_var))
+        down = down.resize((width, height), Image.ANTIALIAS)
+        down = pil_to_np(down)
+        repetitions = shape[1] / down.shape[0]
+        remainder = shape[1] % down.shape[0]
+        down = np.repeat(down, repetitions, axis=0)
+        down = np.append(down, down[:remainder,:,:], axis=0)
+        np.random.shuffle(down)
+        down = np_to_var(down)
+        print("downsampled image shape: ", down.shape)
+        net_input_saved = net_input.data.clone()
+        net_input.data += down + -0.05
+
+    p = [x for x in net.parameters()]
 
     if(opt_input == True):
         net_input.requires_grad = True
         p += [net_input]
 
-    mse_wrt_noisy = np.zeros(num_iter)
-    mse_wrt_truth = np.zeros(num_iter)
+    loss_wrt_noisy = np.zeros(num_iter)
+    loss_wrt_truth = np.zeros(num_iter)
 
     if OPTIMIZER == 'SGD':
         print("optimize with SGD", LR)
@@ -74,12 +93,11 @@ def fit(net,
         print("optimize with adam", LR)
         optimizer = torch.optim.Adam(p, lr=LR)
 
-    mse = torch.nn.MSELoss() #.type(dtype) 
-    noise_energy = mse(img_noisy_var, img_clean_var)
+    noise_energy = torch.nn.MSELoss()(img_noisy_var, img_clean_var)
 
     if find_best:
         best_net = copy.deepcopy(net)
-        best_mse = 1000000.0
+        best_loss = 1000000.0
 
     for i in range(num_iter):
         if decaylr is True:
@@ -93,32 +111,30 @@ def fit(net,
 
         # training loss 
         if mask_var is not None:
-            loss = mse( out * mask_var , img_noisy_var * mask_var )
+            loss = loss_func(out * mask_var , img_noisy_var * mask_var )
         elif apply_f:
-            loss = mse( apply_f(out) , img_noisy_var )
+            loss = loss_func(apply_f(out) , img_noisy_var )
         else:
-            loss = mse(out, img_noisy_var)
+            loss = loss_func(out, img_noisy_var)
         loss.backward()
-        mse_wrt_noisy[i] = loss.data.cpu().numpy()
+        loss_wrt_noisy[i] = loss.data.cpu().numpy()
 
         # the actual loss 
-        true_loss = mse(Variable(out.data, requires_grad=False), img_clean_var)
-        mse_wrt_truth[i] = true_loss.data.cpu().numpy()
+        true_loss = loss_func(Variable(out.data, requires_grad=False), img_clean_var)
+        loss_wrt_truth[i] = true_loss.data.cpu().numpy()
         if i % 10 == 0:
             out2 = net(Variable(net_input_saved).type(dtype))
-            loss2 = mse(out2, img_clean_var)
-            #print ('Iteration %05d    Train loss %f  Actual loss %f Actual loss orig %f  Noise Energy %f'
-            #       % (i, loss.data.item(),true_loss.data.item(),loss2.data.item(),noise_energy.data.item()), '\r', end='')
+            loss2 = loss_func(out2, img_clean_var)
             print ('Iteration %05d    Train loss %f  Actual loss %f Actual loss orig %f  Noise Energy %f' % (i, loss.data[0],true_loss.data[0],loss2.data[0],noise_energy.data[0]), '\r', end='')
         
         if find_best:
             # if training loss improves by at least one percent, we found a new best net
-            if best_mse > 1.005*loss.data[0]:
-                best_mse = loss.data[0]
+            if best_loss > 1.005*loss.data[0]:
+                best_loss = loss.data[0]
                 best_net = copy.deepcopy(net)
 
         optimizer.step()
     if find_best:
         net = best_net
-    return mse_wrt_noisy, mse_wrt_truth,net_input_saved, net
+    return loss_wrt_noisy, loss_wrt_truth, net_input_saved, net
 
