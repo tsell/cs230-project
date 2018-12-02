@@ -10,10 +10,6 @@ import numpy as np
 
 from torch.autograd import Variable
 
-
-
-
-
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
@@ -85,6 +81,20 @@ def pil_to_np(img_PIL):
 
     return ar.astype(np.float32) / 255.
 
+def np_to_pil(img_np):
+    '''Converts image in np.array format to PIL format.
+    
+    From C x W x H [0..1] to W x H x C [0...255] 
+    '''
+    ar = img_np * 255.
+
+    if len(ar.shape) == 3:
+        ar = ar.transpose(1,2,0)
+    else:
+        ar = ar.transpose(1,2,0,3)
+
+    return Image.fromarray(np.uint8(ar))
+
 
 def rgb2ycbcr(img):
     #out = color.rgb2ycbcr( img.transpose(1, 2, 0) )
@@ -103,8 +113,6 @@ def ycbcr2rgb(img):
     g = y - 0.344136*(cb-0.5) - 0.714136*(cr-0.5)
     b = y + 1.772*(cb - 0.5)
     return np.array([r,g,b])
-
-
 
 def mse(x_hat,x_true,maxv=1.):
     x_hat = x_hat.flatten()
