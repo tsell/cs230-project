@@ -38,6 +38,7 @@ def fit(net,
         mask_var = None,
         apply_f = None,
         loss_func = torch.nn.MSELoss(),
+        mse_loss_weight = 0.0,
         decaylr = False,
         net_input = None,
         net_input_gen = "random",
@@ -98,6 +99,10 @@ def fit(net,
     if find_best:
         best_net = copy.deepcopy(net)
         best_loss = 1000000.0
+        
+    loss_goal = img_noisy_var
+    if mask_var is not None:
+        loss_goal = img_noisy_var * mask_var
 
     for i in range(num_iter):
         if decaylr is True:
@@ -110,22 +115,33 @@ def fit(net,
         out = net(net_input.type(dtype))
 
         # training loss 
+        loss_actual = out
         if mask_var is not None:
-            loss = loss_func(out * mask_var , img_noisy_var * mask_var )
+                loss_actual = out * mask_var
         elif apply_f:
-            loss = loss_func(apply_f(out) , img_noisy_var )
+                loss_actual = apply_f(out)
+                
+        if loss_func:
+            # The loss we optimize is formed by comparing the current output to the noisy image.
+            loss = loss_func(loss_actual, loss_goal) + mse_loss_weight * torch.nn.MSELoss()(loss_actual, loss_goal)
+            # true_loss is formed by comparing the current output to the "clean", un-noisy image.
+            true_loss = loss_func(Variable(out.data, requires_grad=False), img_clean_var)
+            true_loss = true_loss + mse_loss_weight * torch.nn.MSELoss()(Variable(out.data, requires_grad=False), img_clean_var)
         else:
-            loss = loss_func(out, img_noisy_var)
+            loss = torch.nn.MSELoss()(loss_actual, loss_goal)
+            true_loss = torch.nn.MSELoss()(Variable(out.data, requires_grad=False), img_clean_var)
+        
         loss.backward()
         loss_wrt_noisy[i] = loss.data.cpu().numpy()
-
-        # the actual loss 
-        true_loss = loss_func(Variable(out.data, requires_grad=False), img_clean_var)
         loss_wrt_truth[i] = true_loss.data.cpu().numpy()
+        
+        # Every ten iterations, output the statistics.
         if i % 10 == 0:
+            # loss2 uses the original network input, without the reg_noise added.
             out2 = net(Variable(net_input_saved).type(dtype))
-            loss2 = loss_func(out2, img_clean_var)
-            print ('Iteration %05d    Train loss %f  Actual loss %f Actual loss orig %f  Noise Energy %f' % (i, loss.data[0],true_loss.data[0],loss2.data[0],noise_energy.data[0]), '\r', end='')
+            loss2 = loss_func(out2, img_clean_var) + mse_loss_weight * torch.nn.MSELoss()(out2, img_clean_var)
+            print ('Iteration %05d   Train loss %f  Actual loss %f Actual loss orig %f  Noise Energy %f' %
+                   (i, loss.data[0],true_loss.data[0],loss2.data[0],noise_energy.data[0]), '\r', end='')
         
         if find_best:
             # if training loss improves by at least one percent, we found a new best net
