@@ -23,7 +23,7 @@ def conv(in_f, out_f, kernel_size, stride=1, pad='zero'):
 
 def decodernw(
         num_output_channels=3, 
-        num_channels_up=[128]*5, 
+        num_channels_up=None, 
         filter_size_up=1,
         need_sigmoid=True, 
         pad='reflection', 
@@ -34,11 +34,14 @@ def decodernw(
         bn_affine = True,
         ):
     
+    if num_channels_up is None:
+        num_channels_up = [128]*5
+        
     num_channels_up = num_channels_up + [num_channels_up[-1], num_channels_up[-1]]
     n_scales = len(num_channels_up) 
     
     if not (isinstance(filter_size_up, list) or isinstance(filter_size_up, tuple)) :
-        filter_size_up   = [filter_size_up]*n_scales
+        filter_size_up = [filter_size_up]*n_scales
 
     model = nn.Sequential()
 

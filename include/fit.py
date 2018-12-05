@@ -45,6 +45,9 @@ def fit(net,
         find_best=False,
        ):
 
+    if loss_func is None:
+        mse_loss_weight = None
+    
     if net_input is not None:
         print("input provided")
     else:
@@ -121,7 +124,7 @@ def fit(net,
         elif apply_f:
                 loss_actual = apply_f(out)
                 
-        if loss_func:
+        if loss_func is not None and loss_func is not torch.nn.MSELoss():
             # The loss we optimize is formed by comparing the current output to the noisy image.
             loss = loss_func(loss_actual, loss_goal) + mse_loss_weight * torch.nn.MSELoss()(loss_actual, loss_goal)
             # true_loss is formed by comparing the current output to the "clean", un-noisy image.
@@ -137,11 +140,15 @@ def fit(net,
         
         # Every ten iterations, output the statistics.
         if i % 10 == 0:
-            # loss2 uses the original network input, without the reg_noise added.
+            # orig_loss uses the original network input, without the reg_noise added.
             out2 = net(Variable(net_input_saved).type(dtype))
-            loss2 = loss_func(out2, img_clean_var) + mse_loss_weight * torch.nn.MSELoss()(out2, img_clean_var)
-            print ('Iteration %05d   Train loss %f  Actual loss %f Actual loss orig %f  Noise Energy %f' %
-                   (i, loss.data[0],true_loss.data[0],loss2.data[0],noise_energy.data[0]), '\r', end='')
+            if loss_func:
+                orig_loss = loss_func(out2, img_clean_var) + mse_loss_weight * torch.nn.MSELoss()(out2, img_clean_var)
+            else:
+                orig_loss = torch.nn.MSELoss()(out2, img_clean_var)
+            mse_loss = torch.nn.MSELoss()(out2, img_clean_var)
+            print ('Iteration %05d   Train loss %f  Actual loss %f Actual loss orig %f MSE Loss %f Noise Energy %f' %
+                   (i, loss.data[0], true_loss.data[0], orig_loss.data[0], mse_loss.data[0], noise_energy.data[0]), '\r', end='')
         
         if find_best:
             # if training loss improves by at least one percent, we found a new best net
