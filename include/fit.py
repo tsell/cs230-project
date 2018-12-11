@@ -7,8 +7,8 @@ from scipy.linalg import hadamard
 
 from .helpers import *
 
-#dtype = torch.cuda.FloatTensor
-dtype = torch.FloatTensor
+dtype = torch.cuda.FloatTensor
+#dtype = torch.FloatTensor
            
 
 def exp_lr_scheduler(optimizer, epoch, init_lr=0.001, lr_decay_epoch=7):
