@@ -147,7 +147,7 @@ def fit(net,
             else:
                 orig_loss = torch.nn.MSELoss()(out2, img_clean_var)
             mse_loss = torch.nn.MSELoss()(out2, img_clean_var)
-            print ('Iteration %05d   Train loss %f  Actual loss %f Actual loss orig %f MSE Loss %f Noise Energy %f' %
+            print('Iteration %05d   Train loss %f  Actual loss %f Actual loss orig %f MSE Loss %f Noise Energy %f' %
                    (i, loss.data[0], true_loss.data[0], orig_loss.data[0], mse_loss.data[0], noise_energy.data[0]), '\r', end='')
         
         if find_best:
