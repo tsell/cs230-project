@@ -1,3 +1,7 @@
+from collections import defaultdict
+
+import matplotlib.pyplot as plt
+
 from torch.autograd import Variable
 import torch
 import torch.optim
@@ -43,6 +47,7 @@ def fit(net,
         net_input = None,
         net_input_gen = "random",
         find_best=False,
+        display_training_graph = False,
        ):
 
     if loss_func is None:
@@ -107,6 +112,9 @@ def fit(net,
     if mask_var is not None:
         loss_goal = img_noisy_var * mask_var
 
+    # Store the training losses for graphing.
+    loss_record = defaultdict(list)
+    
     for i in range(num_iter):
         if decaylr is True:
             optimizer = exp_lr_scheduler(optimizer, i, init_lr=LR, lr_decay_epoch=100)
@@ -147,6 +155,11 @@ def fit(net,
             else:
                 orig_loss = torch.nn.MSELoss()(out2, img_clean_var)
             mse_loss = torch.nn.MSELoss()(out2, img_clean_var)
+            if display_training_graph:
+                loss_record['loss'].append(loss.data[0])
+                loss_record['true_loss'].append(true_loss.data[0])
+                loss_record['orig_loss'].append(orig_loss.data[0])
+                loss_record['mse_loss'].append(mse_loss.data[0])
             print('Iteration %05d   Train loss %f  Actual loss %f Actual loss orig %f MSE Loss %f Noise Energy %f' %
                    (i, loss.data[0], true_loss.data[0], orig_loss.data[0], mse_loss.data[0], noise_energy.data[0]), '\r', end='')
         
@@ -159,5 +172,20 @@ def fit(net,
         optimizer.step()
     if find_best:
         net = best_net
+        
+    if display_training_graph:
+        fig = plt.figure(1)
+        for i, key in enumerate(loss_record):
+            sp = fig.add_subplot(221+i)
+            sp.plot(loss_record[key])
+            sp.set_autoscale_on(True)
+            sp.minorticks_off()
+            sp.set_title(key)
+            sp.set_yscale('logit')
+            sp.grid(True)
+        fig.subplots_adjust(top=0.92, bottom=0.08, left=0.10, right=0.95, hspace=0.25,
+                    wspace=0.35)
+        plt.show()
+        
     return loss_wrt_noisy, loss_wrt_truth, net_input_saved, net
 
