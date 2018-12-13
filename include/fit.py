@@ -27,6 +27,19 @@ def exp_lr_scheduler(optimizer, epoch, init_lr=0.001, lr_decay_epoch=7):
 
     return optimizer
 
+def show_quad_graphs(loss_record):
+    fig = plt.figure(1)
+    for i, key in enumerate(loss_record):
+        sp = fig.add_subplot(221+i)
+        sp.plot(loss_record[key])
+        sp.set_title(key)
+        sp.set_yscale('logit')
+        sp.minorticks_off()
+        sp.grid(True)
+        sp.autoscale_view(tight=True, scaley=True)
+    fig.subplots_adjust(top=0.92, bottom=0.08, left=0.10, right=0.95, hspace=0.4,
+                wspace=0.35)
+    plt.show()
 
 
 def fit(net,
@@ -174,18 +187,7 @@ def fit(net,
         net = best_net
         
     if display_training_graph:
-        fig = plt.figure(1)
-        for i, key in enumerate(loss_record):
-            sp = fig.add_subplot(221+i)
-            sp.plot(loss_record[key])
-            sp.set_autoscale_on(True)
-            sp.minorticks_off()
-            sp.set_title(key)
-            sp.set_yscale('logit')
-            sp.grid(True)
-        fig.subplots_adjust(top=0.92, bottom=0.08, left=0.10, right=0.95, hspace=0.25,
-                    wspace=0.35)
-        plt.show()
+        show_quad_graphs(loss_record)
         
     return loss_wrt_noisy, loss_wrt_truth, net_input_saved, net
 
