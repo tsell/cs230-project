@@ -1,6 +1,6 @@
 # Deep Decoder
 
-This repository provides code for reproducing the figures in the  paper:
+This repository was forked from the [repository](https://github.com/reinhardh/supplement_deep_decoder) which provides code for reproducing the figures in the  paper:
 
 **``Deep Decoder: Concise Image Representations from Untrained Non-convolutional Networks''**, by Reinhard Heckel and Paul Hand. Contact: rh43@rice.edu
 
