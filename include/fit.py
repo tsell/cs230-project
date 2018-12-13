@@ -26,22 +26,7 @@ def exp_lr_scheduler(optimizer, epoch, init_lr=0.001, lr_decay_epoch=7):
         param_group['lr'] = lr
 
     return optimizer
-
-def show_quad_graphs(loss_record):
-    fig = plt.figure(1)
-    for i, key in enumerate(loss_record):
-        sp = fig.add_subplot(221+i)
-        sp.plot(loss_record[key])
-        sp.set_title(key)
-        sp.set_yscale('logit')
-        sp.minorticks_off()
-        sp.grid(True)
-        sp.autoscale_view(tight=True, scaley=True)
-    fig.subplots_adjust(top=0.92, bottom=0.08, left=0.10, right=0.95, hspace=0.4,
-                wspace=0.35)
-    plt.show()
-
-
+    
 def fit(net,
         img_noisy_var,
         num_channels,
@@ -60,7 +45,6 @@ def fit(net,
         net_input = None,
         net_input_gen = "random",
         find_best=False,
-        display_training_graph = False,
        ):
 
     if loss_func is None:
@@ -164,15 +148,12 @@ def fit(net,
             # orig_loss uses the original network input, without the reg_noise added.
             out2 = net(Variable(net_input_saved).type(dtype))
             if loss_func:
-                orig_loss = loss_func(out2, img_clean_var) + mse_loss_weight * torch.nn.MSELoss()(out2, img_clean_var)
+                mse_loss = torch.nn.MSELoss()(out2, img_clean_var)
+                orig_loss = loss_func(out2, img_clean_var) + mse_loss_weight * mse_loss
             else:
+                mse_loss = loss
                 orig_loss = torch.nn.MSELoss()(out2, img_clean_var)
-            mse_loss = torch.nn.MSELoss()(out2, img_clean_var)
-            if display_training_graph:
-                loss_record['loss'].append(loss.data[0])
-                loss_record['true_loss'].append(true_loss.data[0])
-                loss_record['orig_loss'].append(orig_loss.data[0])
-                loss_record['mse_loss'].append(mse_loss.data[0])
+            
             print('Iteration %05d   Train loss %f  Actual loss %f Actual loss orig %f MSE Loss %f Noise Energy %f' %
                    (i, loss.data[0], true_loss.data[0], orig_loss.data[0], mse_loss.data[0], noise_energy.data[0]), '\r', end='')
         
@@ -185,9 +166,6 @@ def fit(net,
         optimizer.step()
     if find_best:
         net = best_net
-        
-    if display_training_graph:
-        show_quad_graphs(loss_record)
         
     return loss_wrt_noisy, loss_wrt_truth, net_input_saved, net
 
