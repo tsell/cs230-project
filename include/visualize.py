@@ -36,7 +36,6 @@ def apply_until(net_input,net,n = 100):
 
 from math import ceil
 
-
 # given a lists of images as np-arrays, plot them as a row# given 
 def plot_image_grid(imgs,nrows=10):
     ncols = ceil( len(imgs)/nrows )
@@ -56,3 +55,25 @@ def save_tensor(out,filename,nrows=8):
     plt.savefig(filename)
     plt.close()
 
+def show_graph(loss_wrt_noisy, loss_wrt_clean):
+    fig = plt.figure(figsize=(7,3), dpi=300)
+    
+    sp = fig.add_subplot(121)
+    sp.plot(loss_wrt_clean)
+    sp.set_title('Loss w.r.t clean')
+    sp.set_yscale('logit')
+    sp.minorticks_off()
+    sp.grid(True)
+    sp.autoscale_view(tight=True, scaley=True)
+    
+    sp = fig.add_subplot(122)
+    sp.plot(loss_wrt_noisy)
+    sp.set_title('Loss w.r.t noisy')
+    sp.set_yscale('logit')
+    sp.minorticks_off()
+    sp.grid(True)
+    sp.autoscale_view(tight=True, scaley=True)
+    
+    fig.subplots_adjust(top=0.92, bottom=0.08, left=0.10, right=0.95, hspace=0.4,
+                wspace=0.35)
+    plt.show()
