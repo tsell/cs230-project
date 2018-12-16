@@ -1,3 +1,5 @@
+This is a copy of the original repo found at https://github.com/csjunxu/PolyU-Real-World-Noisy-Images-Dataset .
+
 % ===============================================================
 The dataset in this package provides the real-world noisy images 
 as described in the following paper:
