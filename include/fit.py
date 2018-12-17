@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 import matplotlib.pyplot as plt
 
 from torch.autograd import Variable
@@ -112,9 +110,6 @@ def fit(net,
     loss_goal = img_noisy_var
     if mask_var is not None:
         loss_goal = img_noisy_var * mask_var
-
-    # Store the training losses for graphing.
-    loss_record = defaultdict(list)
     
     for i in range(num_iter):
         
